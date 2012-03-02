@@ -1,0 +1,37 @@
+
+== well-known
+
+=== Why?
+
+http://tools.ietf.org/html/rfc6415
+
+=== What?
+
+* /.well-known/host-meta
+* /.well-known/lrdd/describe?uri={uri}
+
+=== How?
+
+Configure HOST/PORT/SCHEME/PREFIX/PROFILE_PATTERN in lib/well_known.rb.
+
+Then start up server:
+
+  $ rackup -s thin # (or whatever you like)
+
+Configure nginx (or adapt to your favourite webserver):
+
+  server {
+    server_name example.com;
+    listen 443;
+   
+    ## ADD SSL CONFIGURATION HERE:
+    # ssl on
+    # ...
+   
+    root /home/nil/sites/heahdk.net;
+   
+    location /.well-known/ {
+      proxy_pass http://localhost:9292/
+    }
+   
+  }
