@@ -80,7 +80,6 @@ class WellKnown < Sinatra::Base
     uri.scheme = 'acct'
 
     Nokogiri::XML::Builder.new do |xml|
-      xml.instruct!
       xml.xrd(
         'xmlns' => 'http://docs.oasis-open.org/ns/xri/xrd-1.0'
       ) do
