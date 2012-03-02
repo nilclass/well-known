@@ -28,17 +28,17 @@ class WellKnown < Sinatra::Base
     allow_origin('*')
     content_type 'application/xrd+xml'
     Nokogiri::XML::Builder.new do |xml|
-      xml.xrd(
+      xml.XRD(
         'xmlns' => 'http://docs.oasis-open.org/ns/xri/xrd-1.0',
         'xmlns:hm' => 'http://host-meta.net/xrd/1.0'
       ) do
-        xml['hm'].host(HOST)
+        xml['hm'].Host(HOST)
 
-        xml.link(
+        xml.Link(
           'rel' => 'lrdd',
           'template' => lrdd_describe_url
         ) do
-          xml.title("Resource Descriptor")
+          xml.Title("Resource Descriptor")
         end
       end
     end.to_xml
@@ -80,11 +80,11 @@ class WellKnown < Sinatra::Base
     uri.scheme = 'acct'
 
     Nokogiri::XML::Builder.new do |xml|
-      xml.xrd(
+      xml.XRD(
         'xmlns' => 'http://docs.oasis-open.org/ns/xri/xrd-1.0'
       ) do
-        xml.subject(uri.to_s)
-        xml.alias(profile_url(uri.user))
+        xml.Subject(uri.to_s)
+        xml.Alias(profile_url(uri.user))
       end
     end.to_xml
   end
