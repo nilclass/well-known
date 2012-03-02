@@ -86,7 +86,7 @@ class WellKnown < Sinatra::Base
         xml.subject(uri.to_s)
         xml.alias(profile_url(uri.user))
       end
-    end
+    end.to_xml
   end
 
   helpers do
