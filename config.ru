@@ -27,7 +27,7 @@ class WellKnown < Sinatra::Base
 </XRD>
 =end
 
-  get '/.well-known/host-meta' do
+  get '/host-meta' do
     allow_origin('*')
     content_type 'application/xrd+xml'
     Nokogiri::XML::Builder.new do |xml|
@@ -70,7 +70,7 @@ class WellKnown < Sinatra::Base
 </XRD>
 =end
 
-  get '/.well-known/lrdd/describe' do
+  get '/lrdd/describe' do
     allow_origin('*')
     content_type 'application/xrd+xml'
 
@@ -89,15 +89,27 @@ class WellKnown < Sinatra::Base
         'xmlns' => 'http://docs.oasis-open.org/ns/xri/xrd-1.0'
       ) do
         xml.subject(uri.to_s)
-        xml.alias("#{SCHEME}://#{HOST}/~#{uri.name})")
+        xml.alias(profile_url(uri.name))
       end
     end
   end
 
   helpers do
     def lrdd_describe_url
+      well_known_url('lrdd', 'describe?uri={uri}')
+    end
+
+    def profile_url(name)
+      "#{base_url}/~#{name})"
+    end
+
+    def well_known_url(*parts)
+      [base_url, '.well-known', *parts].join('/')
+    end
+
+    def base_url
       port = [80, 443].include?(PORT) ? '' : ":#{PORT}"
-      "#{SCHEME}://#{HOST}#{port}/.well-known/lrdd/describe?uri={uri}"
+      "#{SCHEME}://#{HOST}#{port}"
     end
 
     def allow_origin(origin)
