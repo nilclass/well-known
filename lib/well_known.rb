@@ -13,6 +13,18 @@ class WellKnown < Sinatra::Base
   ## to this app from a frontend server (which is recommended)
   PREFIX = '/.well-known'
 
+  ## How do your profile URLs work?
+  PROFILE_PATTERN = '{base_url}/~{name}' # (example: http://wonderland.lit/~alice)
+
+  def self.get(path, &block)
+    file, line = caller.first.match(/^([^\:]+)\:(\d+)/)[1..2]
+    location = "#{File.basename(file)}:#{line}"
+    path = PREFIX + path
+    puts "ROUTE: #{path} => @#{location}"
+    super(path, &block)
+  end
+
+
   get '/host-meta' do
 
     allow_origin('*')
@@ -30,21 +42,12 @@ class WellKnown < Sinatra::Base
     #     </Link>
     # </XRD>
 
-    Nokogiri::XML::Builder.new do |xml|
-      xml.XRD(
-        'xmlns' => 'http://docs.oasis-open.org/ns/xri/xrd-1.0',
-        'xmlns:hm' => 'http://host-meta.net/xrd/1.0'
-      ) do
-        xml['hm'].Host(HOST)
-
-        xml.Link(
-          'rel' => 'lrdd',
-          'template' => lrdd_describe_url
-        ) do
-          xml.Title("Resource Descriptor")
-        end
+    xrd(:hm) do |x|
+      x['hm'].Host(HOST)
+      x.Link('rel' => 'lrdd', 'template' => lrdd_describe_url) do
+        x.Title("Resource Descriptor")
       end
-    end.to_xml
+    end
   end
 
   get '/lrdd/describe' do
@@ -58,7 +61,12 @@ class WellKnown < Sinatra::Base
 
     uri = URI.parse(uri_string)
 
+    unless uri.scheme == 'acct'
+      throw :halt, [412, "Precondition Failed\nSorry, we don't support #{uri.scheme} URIs yet."]
+    end
+
     unless uri.host == HOST
+      puts "Don't know about host #{uri.host}. My name is #{HOST}"
       throw :halt, [404, "Not Found\n"]
     end
 
@@ -108,17 +116,17 @@ class WellKnown < Sinatra::Base
         'xmlns' => 'http://docs.oasis-open.org/ns/xri/xrd-1.0'
       }.merge(
         Hash[
-          *ns.map {|n|
+          ns.map {|n|
             ["xmlns:#{n}", XRD_NS[n]]
           }
         ]
       )
 
-      Nokogiri::XML::Builder.new do |xml|
-        xml.XRD(namespaces) do
+      return Nokogiri::XML::Builder.new { |xml|
+        xml.XRD(namespaces) {
           yield(xml)
-        end.to_xml
-      end
+        }
+      }.to_xml
     end
 
     ## Urls
@@ -128,16 +136,22 @@ class WellKnown < Sinatra::Base
     end
 
     def profile_url(name)
-      "#{base_url}/~#{name}"
+      vars = {
+        :base_url => base_url,
+        :name => name
+      }
+      PROFILE_PATTERN.gsub(/\{(base_url|name)\}/) { |k|
+        vars[ k.gsub(/[\{\}]/, '').to_sym ]
+      }
     end
 
     def well_known_url(*parts)
-      [base_url, '.well-known', *parts].join('/')
+      base_url('.well-known', *parts)
     end
 
-    def base_url
+    def base_url(*parts)
       port = [80, 443].include?(PORT.to_i) ? '' : ":#{PORT}"
-      "#{SCHEME}://#{HOST}#{port}"
+      ["#{SCHEME}://#{HOST}#{port}", *parts].join('/')
     end
 
   end
