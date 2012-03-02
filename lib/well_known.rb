@@ -95,7 +95,7 @@ class WellKnown < Sinatra::Base
     end
 
     def profile_url(name)
-      "#{base_url}/~#{name})"
+      "#{base_url}/~#{name}"
     end
 
     def well_known_url(*parts)
