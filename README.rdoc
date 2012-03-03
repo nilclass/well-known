@@ -28,7 +28,7 @@ Configure nginx (or adapt to your favourite webserver):
     # ssl on
     # ...
    
-    root /home/nil/sites/heahdk.net;
+    root /wherever/you/want;
    
     location /.well-known/ {
       proxy_pass http://localhost:9292/
