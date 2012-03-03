@@ -2,6 +2,8 @@
 
 require 'sinatra'
 require 'nokogiri'
+require 'yaml'
+require 'etc'
 
 class WellKnown < Sinatra::Base
 
@@ -14,7 +16,29 @@ class WellKnown < Sinatra::Base
   PREFIX = '/.well-known'
 
   ## How do your profile URLs work?
-  PROFILE_PATTERN = '{base_url}/~{name}' # (example: http://wonderland.lit/~alice)
+  PROFILE_PATTERN = '[base_url]/~[name]' # (example: http://wonderland.lit/~alice)
+
+  ## Configure your services:
+  SERVICE_LINKS = {
+    ## Example for remoteStorage:
+    # 'remoteStorage' => {
+    #   'rel' => 'remoteStorage',
+    #   'api' => 'CouchDB',
+    #   'template' => 'http://localhost:5984/[name]/{category}/',
+    #   'auth' => '...'
+    # }
+  }
+
+
+  ## Where do UIDs of actual users start?
+  UID_START = 1000
+
+  passwd_entries = []
+  while entry = Etc.getpwent
+    passwd_entries.push(entry) if entry.uid >= UID_START
+  end
+
+  USERS = Hash[passwd_entries.map {|e| [e.name, e] }].freeze
 
   def self.get(path, &block)
     file, line = caller.first.match(/^([^\:]+)\:(\d+)/)[1..2]
@@ -70,6 +94,11 @@ class WellKnown < Sinatra::Base
       throw :halt, [404, "Not Found\n"]
     end
 
+    unless USERS[uri.user]
+      puts "Don't know user #{uri.user}."
+      throw :halt, [404, "Not Found\n"]
+    end
+
     # <?xml version='1.0' encoding='UTF-8'?>
     # <XRD xmlns='http://docs.oasis-open.org/ns/xri/xrd-1.0'>
     #
@@ -95,6 +124,8 @@ class WellKnown < Sinatra::Base
     xrd do |x|
       x.Subject(uri.to_s)
       x.Alias(profile_url(uri.user))
+
+      add_links(x, uri.user)
     end
   end
 
@@ -129,6 +160,31 @@ class WellKnown < Sinatra::Base
       }.to_xml
     end
 
+    def add_links(xrd, user)
+      config_path = File.join(home_dir(user), '.lrdd.yml')
+      if File.exist?(config_path)
+        config = YAML.load_file(config_path)
+        vars = {
+          :name => user
+        }
+        config['services'].each do |service|
+          if attributes = SERVICE_LINKS[service]
+            xrd.Link(
+              attributes.each_pair.inject({}) { |attrs, (key, value)|
+                attrs.update(key => replace_vars(value, vars))
+              }
+            )
+          else
+            puts "WARNING: Service not defined: #{service}"
+          end
+        end
+      end
+    end
+
+    def home_dir(user)
+      USERS[user].dir
+    end
+
     ## Urls
 
     def lrdd_describe_url
@@ -140,9 +196,7 @@ class WellKnown < Sinatra::Base
         :base_url => base_url,
         :name => name
       }
-      PROFILE_PATTERN.gsub(/\{(base_url|name)\}/) { |k|
-        vars[ k.gsub(/[\{\}]/, '').to_sym ]
-      }
+      replace_vars(PROFILE_PATTERN, vars)
     end
 
     def well_known_url(*parts)
@@ -152,6 +206,15 @@ class WellKnown < Sinatra::Base
     def base_url(*parts)
       port = [80, 443].include?(PORT.to_i) ? '' : ":#{PORT}"
       ["#{SCHEME}://#{HOST}#{port}", *parts].join('/')
+    end
+
+    ## Simple Template
+
+    def replace_vars(template, vars)
+      expression = /\[(#{vars.keys.join('|')})\]/
+      template.gsub(expression) { |k|
+        vars[ k.gsub(/[\[\]]/, '').to_sym ]
+      }
     end
 
   end
