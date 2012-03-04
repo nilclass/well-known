@@ -83,6 +83,13 @@ class WellKnown < Sinatra::Base
       throw :halt, [412, "Precondition Failed\n"]
     end
 
+    colon, at = uri_string.index(':'), uri_string.index('@')
+
+    # force scheme.
+    if at and not colon
+      uri_string = "acct:#{uri_string}"
+    end
+
     uri = URI.parse(uri_string)
 
     unless uri.scheme == 'acct'
