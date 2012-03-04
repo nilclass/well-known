@@ -35,3 +35,11 @@ Configure nginx (or adapt to your favourite webserver):
     }
    
   }
+
+=== More!
+
+https://heahdk.net/~nil/news/0006-implementing-webfinger
+
+This code licenced under GPL in version 1 or 2. You should have received a copy of it with the code, but you didn't.
+
+'()
