@@ -230,7 +230,8 @@ class WellKnown < Sinatra::Base
     def replace_vars(template, vars)
       expression = /\[(#{vars.keys.join('|')})\]/
       template.gsub(expression) { |k|
-        vars[ k.gsub(/[\[\]]/, '').to_sym ]
+        key = k.gsub(/[\[\]]/, '')
+        vars[key.to_sym] || vars[key]
       }
     end
 
