@@ -20,6 +20,16 @@ class WellKnown < Sinatra::Base
 
   ## Configure your services:
   SERVICE_LINKS = {
+    'profile-page' => {
+      'rel' => 'http://webfinger.net/rel/profile-page',
+      'type' => 'text/html',
+      'href' => '[profile_url]'
+    },
+    'updates-from' => {
+      'rel' => 'http://schemas.google.com/g/2010#updates-from',
+      'type' => 'application/atom+xml',
+      'href' => '[href]'
+    },
     ## Example for remoteStorage:
     # 'remoteStorage' => {
     #   'rel' => 'remoteStorage',
